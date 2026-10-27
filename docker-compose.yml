@@ -1,0 +1,40 @@
+services:
+
+  # База данных MySQL
+  mysql:
+    image: mysql:8.4
+    container_name: film-library-lab4-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: filmlibrary
+      MYSQL_USER: filmuser
+      MYSQL_PASSWORD: filmpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # база считается готовой, когда пользователь filmuser может выполнить запрос
+      test: ["CMD", "mysql", "-h", "127.0.0.1", "-ufilmuser", "-pfilmpass", "-e", "SELECT 1", "filmlibrary"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Spring Boot приложение «Фильмотека»
+  app:
+    build: .
+    container_name: film-library-lab4-app
+    restart: on-failure
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/filmlibrary?allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: filmuser
+      SPRING_DATASOURCE_PASSWORD: filmpass
+    ports:
+      - "8080:8080"
+
+volumes:
+  mysql_data:
